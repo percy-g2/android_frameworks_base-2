@@ -23,7 +23,7 @@ public class LightbulbConstants {
     /**
      * Package name of the lightbulb app
      */
-    public static final String APP_PACKAGE_NAME = "com.paranoid.lightbulb";
+    public static final String APP_PACKAGE_NAME = "net.cactii.flash2";
 
     /**
      * Intent action for 'torch state changed' broadcast
