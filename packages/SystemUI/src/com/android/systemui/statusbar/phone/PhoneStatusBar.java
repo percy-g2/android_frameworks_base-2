@@ -78,6 +78,7 @@ import android.view.ViewGroup;
 import android.view.ViewGroup.LayoutParams;
 import android.view.ViewPropertyAnimator;
 import android.view.ViewStub;
+import android.view.ViewTreeObserver;
 import android.view.WindowManager;
 import android.view.animation.AccelerateInterpolator;
 import android.view.animation.Animation;
@@ -155,6 +156,10 @@ public class PhoneStatusBar extends BaseStatusBar implements DemoMode {
     private static final int STATUS_OR_NAV_TRANSIENT =
             View.STATUS_BAR_TRANSIENT | View.NAVIGATION_BAR_TRANSIENT;
     private static final long AUTOHIDE_TIMEOUT_MS = 3000;
+
+    // Extended SwipeHelper params
+    public static final int GESTURE_POSITIVE = 0;
+    public static final int GESTURE_NEGATIVE = 1;
 
     // fling gesture tuning parameters, scaled to display density
     private float mSelfExpandVelocityPx; // classic value: 2000px/s
@@ -361,9 +366,11 @@ public class PhoneStatusBar extends BaseStatusBar implements DemoMode {
         if (mQS != null) {
             mQS.updateBattery();
         }
-        if (mBattery != null && mCircleBattery != null) {
+        if (mBattery != null) {
             mBattery.updateSettings(false);
             mBattery.setColors(false);
+        }
+        if (mCircleBattery != null) {
             mCircleBattery.updateUser(mCurrentUserId);
             mCircleBattery.updateSettings(false);
             mCircleBattery.setColors(false);
@@ -782,12 +789,16 @@ public class PhoneStatusBar extends BaseStatusBar implements DemoMode {
         resetUserSetupObserver();
 
         mBattery = (BatteryMeterView) mStatusBarView.findViewById(R.id.battery);
-        mBattery.updateSettings(false);
-        mBattery.setColors(false);
+        if (mBattery != null) {
+            mBattery.updateSettings(false);
+            mBattery.setColors(false);
+        }
         mCircleBattery = (BatteryCircleMeterView) mStatusBarView.findViewById(R.id.circle_battery);
-        mCircleBattery.updateUser(mCurrentUserId);
-        mCircleBattery.updateSettings(false);
-        mCircleBattery.setColors(false);
+        if (mCircleBattery != null) {
+            mCircleBattery.updateUser(mCurrentUserId);
+            mCircleBattery.updateSettings(false);
+            mCircleBattery.setColors(false);
+        }
 
         return mStatusBarView;
     }
@@ -2624,7 +2635,7 @@ public class PhoneStatusBar extends BaseStatusBar implements DemoMode {
                 final ArrayList<View> snapshot = new ArrayList<View>(numChildren);
                 for (int i=0; i<numChildren; i++) {
                     final View child = mPile.getChildAt(i);
-                    if (mPile.canChildBeDismissed(child) && child.getBottom() > scrollTop &&
+                    if (mPile.canChildBeDismissed(GESTURE_POSITIVE, child) && child.getBottom() > scrollTop &&
                             child.getTop() < scrollBottom) {
                         snapshot.add(child);
                     }
@@ -2922,6 +2933,10 @@ public class PhoneStatusBar extends BaseStatusBar implements DemoMode {
         copyNotifications(notifications, mNotificationData);
         mNotificationData.clear();
 
+        // Halts the old ticker. A new ticker is created in makeStatusBarView() so
+        // this MUST happen before makeStatusBarView();
+        mTicker.halt();
+
         makeStatusBarView();
         repositionNavigationBar();
         if (mNavigationBarView != null) {
@@ -2947,7 +2962,19 @@ public class PhoneStatusBar extends BaseStatusBar implements DemoMode {
 
         updateExpandedViewPos(EXPANDED_LEAVE_ALONE);
         checkBarModes();
-        mRecreating = false;
+
+        // Stop the command queue until the new status bar container settles and has a layout pass
+        mCommandQueue.pause();
+        mStatusBarContainer.requestLayout();
+        mStatusBarContainer.getViewTreeObserver().addOnGlobalLayoutListener(
+                new ViewTreeObserver.OnGlobalLayoutListener() {
+            @Override
+            public void onGlobalLayout() {
+                mStatusBarContainer.getViewTreeObserver().removeOnGlobalLayoutListener(this);
+                mCommandQueue.resume();
+                mRecreating = false;
+            }
+        });
     }
 
     private void removeAllViews(ViewGroup parent) {

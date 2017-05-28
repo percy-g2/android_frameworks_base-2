@@ -721,7 +721,7 @@ public final class Settings {
      */
     @SdkConstant(SdkConstantType.ACTIVITY_INTENT_ACTION)
     public static final String ACTION_NOTIFICATION_LISTENER_SETTINGS
-            = "android.settings.NOTIFICATION_LISTENER_SETTINGS";
+            = "android.settings.ACTION_NOTIFICATION_LISTENER_SETTINGS";
 
     /**
      * Activity Action: Show settings for video captioning.
@@ -2624,6 +2624,12 @@ public final class Settings {
          * @hide
          */
         public static final String QUICK_SETTINGS_TILES = "quick_settings_tiles";
+
+        /**
+         * Quick Settings tiles that should be hidden automatically.
+         * @hide
+         */
+        public static final String QUICK_SETTINGS_HIDE_TILES = "quick_settings_hide_tiles";
 
         /**
          * Setting to show the battery percentage text
